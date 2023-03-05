@@ -1,5 +1,7 @@
-import { useState } from 'react'
-import './App.css'
+import { useEffect, useState } from 'react';
+import './App.css';
+import {db} from "./firebase-config";
+import { getDocs, collection, addDoc, doc, deleteDoc } from 'firebase/firestore';
 
 function App() {
   const [activity, setActivity] = useState('');
@@ -7,6 +9,27 @@ function App() {
   const [expenses, setExpenses] = useState([]);
   const [income, setIncome] = useState('');
   const [net, setNet] = useState(0);
+
+  const Items = collection(db, "Expense-items");
+
+  useEffect(() =>{
+    getItems();
+  },[]);
+  
+  const getItems = async () =>{
+    try {
+      const data = await getDocs(Items);
+      const filteredData = data.docs.map((doc) => (
+        {
+          ...doc.data(), 
+          id: doc.id,
+        }
+      ))
+      setExpenses(filteredData);
+    } catch (err){
+      console.log(err);
+    }
+  };
 
   const list = [...expenses].reverse();
   const total = expenses.reduce((acc, num) => {
@@ -18,17 +41,37 @@ function App() {
     }
   }, 0);
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault();
     if(activity === '' || expense === '' ) return;
-    setExpenses([...expenses, {activity, expense}]);
+    try {
+      await addDoc(Items, {
+        activity: activity,
+        expense: expense,
+      });
+    }
+    catch(err){
+      console.log(err);
+    }
+
+    // setExpenses([...expenses, {activity, expense}]);
+    getItems();
     setNet(income-total-expense);
     setExpense('');
     setActivity('');
   };
 
-const remove = (expenseToRemove) => {
+const remove = async (expenseToRemove) => {
   const newExpenses = expenses.filter((expense) => expense !== expenseToRemove);
+
+  try {
+    const ItemDelete = doc(db, "Expense-items", expenseToRemove.id);
+    await deleteDoc(ItemDelete);
+  }
+  catch(err){
+    console.log(err);
+  }
+
   setNet(income - newExpenses.reduce((acc, expense) => parseInt(expense.expense) + acc, 0));
   setExpenses(newExpenses);
 };
