@@ -80,3 +80,6 @@ label {
   margin-bottom: 100px;
 }
 
+li {
+  list-style: none;
+}
